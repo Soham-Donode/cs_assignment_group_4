@@ -1,0 +1,1 @@
+Place genuine screenshots captured during your own local test here. No screenshots have been fabricated.

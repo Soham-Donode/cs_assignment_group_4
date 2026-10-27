@@ -1,0 +1,13 @@
+{
+  "name": "reflected-xss-educational-lab",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Local-only reflected XSS coursework demonstration with vulnerable and mitigated routes",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js"
+  },
+  "dependencies": {
+    "express": "^4.21.2"
+  }
+}
