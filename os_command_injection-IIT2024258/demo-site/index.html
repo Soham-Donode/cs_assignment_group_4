@@ -1,0 +1,841 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>OS Command Injection Lab &ndash; IIT2024258</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+
+:root {
+  --bg          : #111318;
+  --bg-panel    : #1b1e25;
+  --bg-input    : #13151a;
+  --bg-terminal : #0d0f14;
+  --border      : #30343d;
+  --border-light: #252830;
+
+  --accent      : #4a9eff;       /* blue — interactive elements only      */
+  --red         : #e05252;       /* vulnerability markers only            */
+  --red-dim     : rgba(224,82,82,0.12);
+  --red-border  : rgba(224,82,82,0.28);
+  --green       : #4caf78;       /* secure markers only                   */
+  --green-dim   : rgba(76,175,120,0.10);
+  --green-border: rgba(76,175,120,0.25);
+
+  --text        : #d4d7de;
+  --text-muted  : #7a8090;
+  --text-dim    : #454b58;
+  --text-code   : #9bb8d4;       /* monospace / inline code color         */
+
+  --font-sans   : 'Inter', system-ui, sans-serif;
+  --font-mono   : 'JetBrains Mono', 'Courier New', monospace;
+
+  --radius      : 6px;
+  --radius-sm   : 4px;
+
+  --space-xs    : 6px;
+  --space-sm    : 12px;
+  --space-md    : 20px;
+  --space-lg    : 32px;
+  --space-xl    : 48px;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family   : var(--font-sans);
+  background    : var(--bg);
+  color         : var(--text);
+  font-size     : 15px;
+  line-height   : 1.6;
+  min-height    : 100vh;
+}
+
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+code, kbd, pre {
+  font-family : var(--font-mono);
+  font-size   : 0.85em;
+  color       : var(--text-code);
+  background  : rgba(255,255,255,0.05);
+  padding     : 1px 5px;
+  border-radius: var(--radius-sm);
+  border      : 1px solid var(--border-light);
+}
+
+/* =============================================================================
+   Layout
+============================================================================= */
+.container {
+  max-width : 980px;
+  margin    : 0 auto;
+  padding   : var(--space-lg) var(--space-md) var(--space-xl);
+}
+
+/* =============================================================================
+   Page header — compact, not a hero
+============================================================================= */
+.page-header {
+  padding-bottom : var(--space-lg);
+  border-bottom  : 1px solid var(--border);
+  margin-bottom  : var(--space-lg);
+}
+
+.page-header-meta {
+  display     : flex;
+  align-items : center;
+  gap         : var(--space-sm);
+  margin-bottom: var(--space-sm);
+}
+
+.lab-tag {
+  font-size     : 11px;
+  font-weight   : 500;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color         : var(--text-muted);
+  border        : 1px solid var(--border);
+  border-radius : var(--radius-sm);
+  padding       : 2px 8px;
+  font-family   : var(--font-mono);
+}
+
+.vuln-tag {
+  font-size     : 11px;
+  font-weight   : 500;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color         : var(--red);
+  border        : 1px solid var(--red-border);
+  border-radius : var(--radius-sm);
+  padding       : 2px 8px;
+  font-family   : var(--font-mono);
+  background    : var(--red-dim);
+}
+
+.page-header h1 {
+  font-size   : 28px;
+  font-weight : 600;
+  color       : #e8eaf0;
+  line-height : 1.25;
+  margin-bottom: var(--space-xs);
+  letter-spacing: -0.3px;
+}
+
+.page-header p {
+  color     : var(--text-muted);
+  font-size : 14px;
+  max-width : 580px;
+}
+
+.assign-info {
+  margin-top  : var(--space-sm);
+  font-family : var(--font-mono);
+  font-size   : 12px;
+  color       : var(--text-dim);
+}
+
+/* =============================================================================
+   Section spacing
+============================================================================= */
+.section {
+  margin-bottom: var(--space-lg);
+}
+
+.section-title {
+  font-size    : 13px;
+  font-weight  : 600;
+  color        : var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.7px;
+  margin-bottom: var(--space-sm);
+  padding-bottom: var(--space-xs);
+  border-bottom : 1px solid var(--border-light);
+}
+
+/* =============================================================================
+   Root cause panel — informational, restrained amber replaced with plain text
+============================================================================= */
+.rootcause {
+  background    : var(--bg-panel);
+  border        : 1px solid var(--border);
+  border-left   : 3px solid var(--accent);
+  border-radius : var(--radius);
+  padding       : var(--space-md);
+  font-size     : 14px;
+  line-height   : 1.75;
+  color         : var(--text-muted);
+}
+
+.rootcause strong {
+  color        : var(--text);
+  font-weight  : 600;
+}
+
+.rootcause em {
+  color        : var(--text);
+  font-style   : normal;
+  font-weight  : 500;
+}
+
+/* =============================================================================
+   Payload section
+============================================================================= */
+.payload-section-desc {
+  font-size    : 14px;
+  color        : var(--text-muted);
+  margin-bottom: var(--space-md);
+  line-height  : 1.6;
+}
+
+.payload-grid {
+  display              : grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap                  : var(--space-sm);
+  margin-bottom        : var(--space-sm);
+}
+
+.payload-item {
+  background   : var(--bg-panel);
+  border       : 1px solid var(--border);
+  border-radius: var(--radius);
+  padding      : 12px 14px;
+  cursor       : pointer;
+  transition   : border-color 0.15s, background 0.15s;
+  user-select  : none;
+}
+
+.payload-item:hover {
+  border-color : var(--red-border);
+  background   : #1f2028;
+}
+
+.payload-item:active {
+  background: var(--bg);
+}
+
+.payload-tag {
+  display      : inline-block;
+  font-family  : var(--font-mono);
+  font-size    : 10px;
+  font-weight  : 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color        : var(--text-dim);
+  margin-bottom: 6px;
+}
+
+.payload-code {
+  font-family  : var(--font-mono);
+  font-size    : 12.5px;
+  color        : var(--red);
+  margin-bottom: 5px;
+  word-break   : break-all;
+  line-height  : 1.5;
+}
+
+.payload-desc {
+  font-size    : 12px;
+  color        : var(--text-muted);
+  line-height  : 1.4;
+}
+
+.click-hint {
+  font-size  : 12px;
+  color      : var(--text-dim);
+  margin-top : var(--space-xs);
+}
+
+.click-hint span {
+  color      : var(--text-muted);
+}
+
+/* =============================================================================
+   Two-column endpoint grid
+============================================================================= */
+.endpoints-grid {
+  display              : grid;
+  grid-template-columns: 1fr 1fr;
+  gap                  : var(--space-md);
+  align-items          : start;
+}
+
+@media (max-width: 720px) {
+  .endpoints-grid { grid-template-columns: 1fr; }
+}
+
+/* =============================================================================
+   Endpoint panels — no hover glow, distinguished only by top border color
+============================================================================= */
+.endpoint-panel {
+  background    : var(--bg-panel);
+  border        : 1px solid var(--border);
+  border-radius : var(--radius);
+  overflow      : hidden;
+}
+
+.endpoint-panel.is-vuln { border-top: 2px solid var(--red); }
+.endpoint-panel.is-sec  { border-top: 2px solid var(--green); }
+
+.panel-header {
+  padding      : 14px 16px;
+  border-bottom: 1px solid var(--border-light);
+  display      : flex;
+  align-items  : center;
+  gap          : var(--space-sm);
+}
+
+.panel-status {
+  font-size   : 10px;
+  font-weight : 600;
+  text-transform: uppercase;
+  letter-spacing: 0.7px;
+  padding     : 2px 7px;
+  border-radius: var(--radius-sm);
+  flex-shrink : 0;
+}
+
+.status-vuln {
+  background: var(--red-dim);
+  color     : var(--red);
+  border    : 1px solid var(--red-border);
+}
+
+.status-sec {
+  background: var(--green-dim);
+  color     : var(--green);
+  border    : 1px solid var(--green-border);
+}
+
+.panel-title {
+  font-size  : 14px;
+  font-weight: 600;
+  color      : var(--text);
+}
+
+.panel-route {
+  font-family: var(--font-mono);
+  font-size  : 11px;
+  color      : var(--text-dim);
+  margin-top : 2px;
+}
+
+.panel-body {
+  padding: 16px;
+}
+
+/* =============================================================================
+   Forms
+============================================================================= */
+label {
+  display       : block;
+  font-size     : 11px;
+  font-weight   : 500;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color         : var(--text-muted);
+  margin-bottom : 6px;
+}
+
+input[type="text"] {
+  width        : 100%;
+  background   : var(--bg-input);
+  border       : 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding      : 8px 10px;
+  color        : var(--text);
+  font-family  : var(--font-mono);
+  font-size    : 13px;
+  outline      : none;
+  transition   : border-color 0.15s;
+  margin-bottom: 10px;
+}
+
+input[type="text"]:focus {
+  border-color: var(--accent);
+}
+
+button {
+  width        : 100%;
+  padding      : 8px 12px;
+  border       : none;
+  border-radius: var(--radius-sm);
+  font-family  : var(--font-sans);
+  font-size    : 13px;
+  font-weight  : 500;
+  cursor       : pointer;
+  transition   : opacity 0.15s;
+}
+
+.btn-vuln {
+  background: var(--red);
+  color     : #fff;
+}
+.btn-vuln:hover   { opacity: 0.88; }
+.btn-vuln:disabled{ opacity: 0.5; cursor: not-allowed; }
+
+.btn-sec {
+  background: var(--green);
+  color     : #0a180f;
+}
+.btn-sec:hover   { opacity: 0.88; }
+.btn-sec:disabled{ opacity: 0.5; cursor: not-allowed; }
+
+.info-note {
+  font-size  : 12px;
+  color      : var(--text-dim);
+  margin-top : 10px;
+  line-height: 1.5;
+}
+
+/* =============================================================================
+   Terminal output
+============================================================================= */
+.terminal {
+  margin-top   : 14px;
+  background   : var(--bg-terminal);
+  border       : 1px solid var(--border-light);
+  border-radius: var(--radius-sm);
+  overflow     : hidden;
+}
+
+.terminal-bar {
+  background   : #141619;
+  padding      : 6px 12px;
+  display      : flex;
+  align-items  : center;
+  gap          : 5px;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.dot        { width: 9px; height: 9px; border-radius: 50%; }
+.dot-r      { background: #e05252; }
+.dot-y      { background: #d4a147; }
+.dot-g      { background: #4caf78; }
+
+.terminal-label {
+  margin-left  : 8px;
+  font-family  : var(--font-mono);
+  font-size    : 10px;
+  color        : var(--text-dim);
+}
+
+.terminal-body {
+  padding     : 12px 14px;
+  font-family : var(--font-mono);
+  font-size   : 12px;
+  line-height : 1.7;
+  color       : #8aaa88;
+  white-space : pre-wrap;
+  word-break  : break-word;
+  min-height  : 72px;
+  max-height  : 260px;
+  overflow-y  : auto;
+}
+
+.terminal-body.error   { color: #c97878; }
+.terminal-body.waiting { color: var(--text-dim); font-style: italic; }
+
+/* =============================================================================
+   Mitigation comparison table
+============================================================================= */
+.compare-section {
+  margin-bottom: var(--space-lg);
+}
+
+.table-wrap {
+  overflow-x   : auto;
+  border       : 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.compare-table {
+  width          : 100%;
+  border-collapse: collapse;
+  font-size      : 13.5px;
+  min-width      : 540px;
+}
+
+.compare-table th {
+  text-align    : left;
+  font-size     : 11px;
+  font-weight   : 600;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color         : var(--text-muted);
+  padding       : 10px 14px;
+  background    : #16181f;
+  border-bottom : 1px solid var(--border);
+}
+
+.compare-table th:nth-child(2) { color: var(--red);   }
+.compare-table th:nth-child(3) { color: var(--green); }
+
+.compare-table td {
+  padding      : 10px 14px;
+  border-bottom: 1px solid var(--border-light);
+  vertical-align: top;
+  line-height  : 1.55;
+  color        : var(--text-muted);
+}
+
+.compare-table tr:last-child td { border-bottom: none; }
+
+.compare-table td:first-child {
+  width        : 26%;
+  color        : var(--text);
+  font-weight  : 500;
+  font-size    : 13px;
+}
+
+.vuln-cell { color: var(--red)   !important; }
+.sec-cell  { color: var(--green) !important; }
+
+/* =============================================================================
+   Footer
+============================================================================= */
+footer {
+  padding-top  : var(--space-lg);
+  border-top   : 1px solid var(--border-light);
+  font-size    : 12px;
+  color        : var(--text-dim);
+  line-height  : 1.7;
+}
+
+footer code {
+  font-size : 11px;
+  color     : var(--text-muted);
+}
+
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- ============================================================
+       Page header
+  ============================================================ -->
+  <header class="page-header">
+    <div class="page-header-meta">
+      <span class="lab-tag">CS / IIT2024258</span>
+      <span class="vuln-tag">OWASP A03 &mdash; Injection</span>
+    </div>
+    <h1>OS Command Injection Lab</h1>
+    <p>
+      Demonstrates in-band Windows CMD injection through a simulated Ping utility.
+      Compares a vulnerable <code>exec()</code> endpoint with a hardened
+      <code>execFile()</code> endpoint and explains the mitigation.
+    </p>
+    <div class="assign-info">Assignment 4 &mdash; Cybersecurity Module</div>
+  </header>
+
+  <!-- ============================================================
+       Root cause
+  ============================================================ -->
+  <section class="section">
+    <div class="section-title">Root Cause</div>
+    <div class="rootcause">
+      <strong>Why it works:</strong> <code>child_process.exec()</code> internally
+      calls <code>cmd.exe /d /s /c "&lt;user_input&gt;"</code> on Windows.
+      Any shell meta-characters (<code>&amp;</code>, <code>|</code>,
+      <code>&amp;&amp;</code>) embedded in the input are interpreted by
+      <code>cmd.exe</code> as <em>command separators</em> &mdash; not as
+      ping arguments &mdash; so arbitrary commands execute at the same privilege
+      level as the Node.js process.
+    </div>
+  </section>
+
+  <!-- ============================================================
+       Payload examples
+  ============================================================ -->
+  <section class="section">
+    <div class="section-title">Test Payloads &mdash; click to auto-fill</div>
+    <p class="payload-section-desc">
+      These are educational test cases that exploit the <code>&amp;</code> and
+      <code>|</code> operators in <code>cmd.exe</code>.
+      They succeed on the <strong>Vulnerable</strong> endpoint and are
+      rejected on the <strong>Secure</strong> endpoint.
+    </p>
+    <!-- Cards are injected by JS -->
+    <div class="payload-grid" id="payload-grid"></div>
+    <p class="click-hint">Click any payload to auto-fill the <span>Vulnerable</span> input field.</p>
+  </section>
+
+  <!-- ============================================================
+       Endpoints side by side
+  ============================================================ -->
+  <section class="section">
+    <div class="section-title">Live Demonstration</div>
+    <div class="endpoints-grid">
+
+      <!-- VULNERABLE -->
+      <div class="endpoint-panel is-vuln">
+        <div class="panel-header">
+          <span class="panel-status status-vuln">Vulnerable</span>
+          <div>
+            <div class="panel-title">exec() with shell</div>
+            <div class="panel-route">POST /ping_vulnerable</div>
+          </div>
+        </div>
+        <div class="panel-body">
+          <form class="vuln-form" onsubmit="return false;">
+            <label for="vuln-ip">Target IP / Hostname</label>
+            <input type="text" id="vuln-ip"
+                   placeholder="e.g. 127.0.0.1 &amp; whoami"
+                   autocomplete="off" spellcheck="false" />
+            <button type="button" id="btn-vuln" class="btn-vuln"
+                    onclick="runPing('vuln-ip','/ping_vulnerable','vuln-output','btn-vuln')">
+              Run Ping
+            </button>
+          </form>
+          <div class="info-note">Shell meta-characters are not filtered. Injection is possible.</div>
+          <div class="terminal">
+            <div class="terminal-bar">
+              <div class="dot dot-r"></div>
+              <div class="dot dot-y"></div>
+              <div class="dot dot-g"></div>
+              <span class="terminal-label">cmd.exe &mdash; exec() output</span>
+            </div>
+            <div class="terminal-body waiting" id="vuln-output">Awaiting input&hellip;</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SECURE -->
+      <div class="endpoint-panel is-sec">
+        <div class="panel-header">
+          <span class="panel-status status-sec">Secure</span>
+          <div>
+            <div class="panel-title">execFile() without shell</div>
+            <div class="panel-route">POST /ping_secure</div>
+          </div>
+        </div>
+        <div class="panel-body">
+          <form class="secure-form" onsubmit="return false;">
+            <label for="sec-ip">Target IP / Hostname</label>
+            <input type="text" id="sec-ip"
+                   placeholder="e.g. 127.0.0.1"
+                   autocomplete="off" spellcheck="false" />
+            <button type="button" id="btn-sec" class="btn-sec"
+                    onclick="runPing('sec-ip','/ping_secure','sec-output','btn-sec')">
+              Run Ping
+            </button>
+          </form>
+          <div class="info-note">Input validated by allowlist. Spawns ping.exe directly &mdash; no shell.</div>
+          <div class="terminal">
+            <div class="terminal-bar">
+              <div class="dot dot-r"></div>
+              <div class="dot dot-y"></div>
+              <div class="dot dot-g"></div>
+              <span class="terminal-label">ping.exe &mdash; execFile() output</span>
+            </div>
+            <div class="terminal-body waiting" id="sec-output">Awaiting input&hellip;</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ============================================================
+       Mitigation comparison
+  ============================================================ -->
+  <section class="compare-section">
+    <div class="section-title">exec() vs. execFile() &mdash; Why It Matters</div>
+    <div class="table-wrap">
+      <table class="compare-table">
+        <thead>
+          <tr>
+            <th>Aspect</th>
+            <th>Vulnerable &mdash; exec()</th>
+            <th>Secure &mdash; execFile()</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Shell invoked?</td>
+            <td class="vuln-cell">Yes &mdash; <code>cmd.exe /d /s /c "..."</code></td>
+            <td class="sec-cell">No &mdash; binary spawned directly</td>
+          </tr>
+          <tr>
+            <td>User input handling</td>
+            <td class="vuln-cell">Concatenated into a shell command string</td>
+            <td class="sec-cell">Passed as a discrete array element (argv)</td>
+          </tr>
+          <tr>
+            <td>Meta-chars <code>&amp; | &amp;&amp;</code></td>
+            <td class="vuln-cell">Evaluated by cmd.exe as command separators</td>
+            <td class="sec-cell">Treated as literal text by ping.exe</td>
+          </tr>
+          <tr>
+            <td>Input validation</td>
+            <td class="vuln-cell">None</td>
+            <td class="sec-cell">Allowlist regex &mdash; alphanumeric, dot, hyphen only</td>
+          </tr>
+          <tr>
+            <td>Payload <code>127.0.0.1 &amp; whoami</code></td>
+            <td class="vuln-cell">Executes both ping and whoami</td>
+            <td class="sec-cell">Rejected at input validation, code never runs</td>
+          </tr>
+          <tr>
+            <td>OWASP / CWE</td>
+            <td class="vuln-cell">
+              A03:2021 Injection &mdash;
+              <a href="https://cwe.mitre.org/data/definitions/78.html"
+                 target="_blank">CWE-78</a>
+            </td>
+            <td class="sec-cell">Parameterized execution + allowlist</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       Footer
+  ============================================================ -->
+  <footer>
+    <p>CS Assignment 4 &middot; Roll No. <code>IIT2024258</code> &middot; Cybersecurity Module</p>
+    <p>For educational demonstration only. Run in an isolated lab environment.</p>
+  </footer>
+
+</div><!-- /.container -->
+
+<script>
+/*
+ * Payload data and DOM logic.
+ * All strings built with textContent — no HTML entity encoding issues.
+ */
+
+var PAYLOADS = [
+  {
+    tag  : "Sequential",
+    code : "127.0.0.1 & whoami",
+    desc : "Runs ping, then reveals the current OS username"
+  },
+  {
+    tag  : "Pipe",
+    code : "127.0.0.1 | dir",
+    desc : "Pipes ping output to dir, listing the working directory"
+  },
+  {
+    tag  : "Conditional",
+    code : "127.0.0.1 && net user",
+    desc : "Runs net user only if ping exits successfully"
+  },
+  {
+    tag  : "File Read",
+    code : "127.0.0.1 & type C:\\Windows\\System32\\drivers\\etc\\hosts",
+    desc : "Reads the system hosts file (sensitive local DNS mapping)"
+  },
+  {
+    tag  : "Network Info",
+    code : "127.0.0.1 & ipconfig /all",
+    desc : "Dumps full network interface configuration"
+  },
+  {
+    tag  : "Env Leak",
+    code : "127.0.0.1 | set",
+    desc : "Leaks all environment variables (paths, secrets, etc.)"
+  }
+];
+
+/* Build payload cards */
+(function buildCards() {
+  var grid = document.getElementById("payload-grid");
+  if (!grid) return;
+
+  for (var i = 0; i < PAYLOADS.length; i++) {
+    var p = PAYLOADS[i];
+
+    var item = document.createElement("div");
+    item.className = "payload-item";
+
+    var tag = document.createElement("div");
+    tag.className = "payload-tag";
+    tag.textContent = p.tag;
+
+    var code = document.createElement("div");
+    code.className = "payload-code";
+    code.textContent = p.code;
+
+    var desc = document.createElement("div");
+    desc.className = "payload-desc";
+    desc.textContent = p.desc;
+
+    item.appendChild(tag);
+    item.appendChild(code);
+    item.appendChild(desc);
+
+    item.addEventListener("click", (function(payload) {
+      return function() {
+        var input = document.getElementById("vuln-ip");
+        input.value = payload.code;
+        input.focus();
+        /* Brief border flash to confirm the fill */
+        input.style.transition  = "border-color 0.1s";
+        input.style.borderColor = "#e05252";
+        setTimeout(function() { input.style.borderColor = ""; }, 600);
+      };
+    })(p));
+
+    grid.appendChild(item);
+  }
+})();
+
+/* Send ping request via XHR */
+function runPing(inputId, endpoint, outputId, btnId) {
+  var input  = document.getElementById(inputId);
+  var output = document.getElementById(outputId);
+  var btn    = document.getElementById(btnId);
+  var target = input.value.trim();
+
+  if (!target) {
+    output.className   = "terminal-body error";
+    output.textContent = "Please enter a target IP or hostname first.";
+    return;
+  }
+
+  output.className   = "terminal-body waiting";
+  output.textContent = "Executing...";
+  btn.disabled       = true;
+  var origText       = btn.textContent;
+  btn.textContent    = "Running...";
+
+  var xhr = new XMLHttpRequest();
+  xhr.open("POST", endpoint, true);
+  xhr.setRequestHeader("Content-Type", "application/json");
+
+  xhr.onload = function() {
+    btn.disabled    = false;
+    btn.textContent = origText;
+    try {
+      var data = JSON.parse(xhr.responseText);
+      if (data.output) {
+        output.className   = "terminal-body";
+        output.textContent = data.output;
+      } else if (data.error) {
+        output.className   = "terminal-body error";
+        output.textContent = "BLOCKED:\n" + data.error;
+      }
+    } catch (e) {
+      output.className   = "terminal-body error";
+      output.textContent = "Parse error: " + e.message;
+    }
+  };
+
+  xhr.onerror = function() {
+    btn.disabled    = false;
+    btn.textContent = origText;
+    output.className   = "terminal-body error";
+    output.textContent = "Network error. Is the server running?";
+  };
+
+  xhr.send(JSON.stringify({ target: target }));
+}
+</script>
+</body>
+</html>

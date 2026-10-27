@@ -1,0 +1,25 @@
+{
+  "name": "cs-assignment4-cmd-injection-lab",
+  "version": "1.0.0",
+  "description": "OS Command Injection Demo — In-Band Windows CMD Injection Lab (IIT2024258)",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js",
+    "dev": "node app.js"
+  },
+  "keywords": [
+    "security",
+    "command-injection",
+    "owasp",
+    "cwe-78",
+    "educational"
+  ],
+  "author": "IIT2024258",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2"
+  },
+  "devDependencies": {
+    "pptxgenjs": "^4.0.1"
+  }
+}

